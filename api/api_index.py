@@ -11,7 +11,6 @@ import json
 import torch
 
 from src.hydra_runner import hydra_runner
-from src.indicies.ivf_flat import IVFFlatIndexer
 from src.search import embed_queries
 from src.indicies.base import Indexer
 
@@ -51,10 +50,10 @@ class DatastoreAPI():
         
         self.cfg = cfg
     
-    def search(self, query, n_docs=3):
+    def search(self, query, n_docs=3, additional_metadata=[]):
         query_embedding = self.embed_query(query)
-        searched_scores, searched_passages, db_ids  = self.index.search(query_embedding, n_docs)
-        results = {'scores': searched_scores, 'passages': searched_passages, 'IDs': db_ids}
+        searched_scores, searched_passages, db_ids, metadata  = self.index.search(query_embedding, n_docs, additional_metadata)
+        results = {'scores': searched_scores, 'passages': searched_passages, 'IDs': db_ids, 'metadata': metadata}
         return results
     
     def embed_query(self, query):
@@ -81,7 +80,8 @@ def main(cfg):
 def test_search(ds):
     query = 'when was the last time anyone was on the moon?'  # 'scores': array([[44.3889  , 44.770973, 45.956238]], dtype=float32), 'IDs': [[[5, 45516], [6, 2218998], [5, 897337]]
     query2 = "who wrote he ain't heavy he's my brother lyrics?"  # 'scores': array([[33.60194 , 41.798004, 43.465225]], dtype=float32) 'IDs': [[[2, 361677], [5, 1717105], [2, 361675]]]
-    search_results = ds.search(query, 1)
+    additional_metadata = [] #["solution"]
+    search_results = ds.search(query, 1, additional_metadata)
     print(search_results)
 
 

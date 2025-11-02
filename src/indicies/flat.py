@@ -126,16 +126,23 @@ class FlatIndexer(object):
             shard_id, chunk_id = 0, self.index_id_to_db_id[index_id]
         return self._id2psg(shard_id, chunk_id)
     
-    def get_retrieved_passages(self, all_indices):
-        passages, db_ids = [], []
+    def get_retrieved_passages(self, all_indices, additional_metadata=[]):
+        passages, db_ids, metadata = [], [], []
         for query_indices in all_indices:
-            passages_per_query = [self._get_passage(int(index_id))["text"] for index_id in query_indices]
+            retrieved_data_per_query = [self._get_passage(int(index_id)) for index_id in query_indices]
+            passages_per_query = [item["text"] for item in retrieved_data_per_query]
+            additional_metadata_per_query = {metadata_key: [item.get(metadata_key, None) for item in retrieved_data_per_query] for metadata_key in additional_metadata}
             db_ids_per_query = [self.index_id_to_db_id[int(index_id)] for index_id in query_indices]
             passages.append(passages_per_query)
             db_ids.append(db_ids_per_query)
-        return passages, db_ids
+            metadata.append(additional_metadata_per_query)
+        return passages, db_ids, metadata
     
-    def search(self, query_embs, k=4096):
+    def search(self, query_embs, k=4096, additional_metadata=[]):
         all_scores, all_indices = self.index.search(query_embs.astype(np.float32), k)
-        all_passages, db_ids = self.get_retrieved_passages(all_indices)
-        return all_scores.tolist(), all_passages, db_ids
+        if len(additional_metadata) > 0:
+            all_passages, db_ids, metadata = self.get_retrieved_passages(all_indices, additional_metadata)
+            return all_scores.tolist(), all_passages, db_ids, metadata
+        else:
+            all_passages, db_ids, metadata = self.get_retrieved_passages(all_indices)
+            return all_scores.tolist(), all_passages, db_ids, metadata

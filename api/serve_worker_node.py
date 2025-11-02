@@ -53,11 +53,12 @@ CORS(app)
 
 
 class Item:
-    def __init__(self, query=None, query_embed=None, domains="MassiveDS", n_docs=1) -> None:
+    def __init__(self, query=None, query_embed=None, domains="MassiveDS", n_docs=1, additional_metadata=[]) -> None:
         self.query = query
         self.query_embed = query_embed
         self.domains = domains
         self.n_docs = n_docs
+        self.additional_metadata = additional_metadata
         self.searched_results = None
     
     def get_dict(self,):
@@ -66,6 +67,7 @@ class Item:
             'query_embed': self.query_embed,
             'domains': self.domains,
             'n_docs': self.n_docs,
+            'additional_metadata': self.additional_metadata,
             'searched_results': self.searched_results,
         }
         return dict_item
@@ -93,7 +95,7 @@ class SearchQueue:
                     formatted_time = now.strftime('%Y-%m-%d %H:%M:%S')
                     with open(self.query_log, 'a+') as fin:
                         fin.write(json.dumps({'time': formatted_time, 'query': item.query})+'\n')
-                results = self.datastore.search(item.query, item.n_docs)
+                results = self.datastore.search(item.query, item.n_docs, item.additional_metadata)
                 self.current_search = None
                 return results
             else:
@@ -107,7 +109,7 @@ class SearchQueue:
             item, future = self.queue.get()
             with self.lock:
                 self.current_search = item
-                item.searched_results = self.datastore.search(item)
+                item.searched_results = self.datastore.search(item.query, item.n_docs, item.additional_metadata)
                 self.current_search = None
             future.set()
             self.queue.task_done()
@@ -122,6 +124,7 @@ def search():
             query=request.json['query'],
             domains=request.json['domains'],
             n_docs=request.json['n_docs'],
+            additional_metadata=request.json.get('additional_metadata', []),
         )
         # Perform the search synchronously with 60s timeout
         timer = threading.Timer(60.0, lambda: (_ for _ in ()).throw(TimeoutError('Search timed out after 60 seconds')))

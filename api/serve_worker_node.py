@@ -41,7 +41,8 @@ def load_config():
             overrides.append(f"{config_key}={value}")
 
     # Compose the configuration with overrides
-    cfg = hydra.compose(config_name="a100", overrides=overrides)
+    config_name = os.getenv('HYDRA_CONFIG_NAME', 'a100')
+    cfg = hydra.compose(config_name=config_name, overrides=overrides)
 
     # Print or use the configuration as needed
     print(OmegaConf.to_yaml(cfg))
